@@ -36,46 +36,56 @@ RUN pip install --no-cache-dir matplotlib && python -c "import matplotlib; print
 
 # ── Pre-download model weights (free during build, not at runtime) ──
 ENV HF_HUB_DOWNLOAD_TIMEOUT=120
-RUN python -c "\
-import time; \
-from huggingface_hub import snapshot_download; \
-for i in range(3): \
-    try: \
-        snapshot_download('Plachta/Seed-VC', local_dir='/app/seed-vc/checkpoints/Seed-VC'); \
-        print('Seed-VC weights downloaded'); break; \
-    except Exception as e: \
-        print(f'Attempt {i+1} failed: {e}'); time.sleep(10); \
-else: print('WARNING: Seed-VC download failed, will download at runtime')"
+RUN python <<'PYEOF'
+import time
+from huggingface_hub import snapshot_download
+for i in range(3):
+    try:
+        snapshot_download('Plachta/Seed-VC', local_dir='/app/seed-vc/checkpoints/Seed-VC')
+        print('Seed-VC weights downloaded')
+        break
+    except Exception as e:
+        print(f'Attempt {i+1} failed: {e}')
+        time.sleep(10)
+else:
+    print('WARNING: Seed-VC download failed, will download at runtime')
+PYEOF
 
-RUN python -c "\
-import time; \
-from transformers import WhisperModel, WhisperFeatureExtractor; \
-for i in range(3): \
-    try: \
-        WhisperModel.from_pretrained('openai/whisper-small'); \
-        WhisperFeatureExtractor.from_pretrained('openai/whisper-small'); \
-        print('Whisper cached'); break; \
-    except Exception as e: \
-        print(f'Attempt {i+1} failed: {e}'); time.sleep(10); \
-else: print('WARNING: Whisper download failed, will download at runtime')"
+RUN python <<'PYEOF'
+import time
+from transformers import WhisperModel, WhisperFeatureExtractor
+for i in range(3):
+    try:
+        WhisperModel.from_pretrained('openai/whisper-small')
+        WhisperFeatureExtractor.from_pretrained('openai/whisper-small')
+        print('Whisper cached')
+        break
+    except Exception as e:
+        print(f'Attempt {i+1} failed: {e}')
+        time.sleep(10)
+else:
+    print('WARNING: Whisper download failed, will download at runtime')
+PYEOF
 
 # ── Pre-download Demucs htdemucs model (~80MB) ──
-RUN python -c "\
-import torch, time, os; \
-cache_dir = os.path.expanduser('~/.cache/torch/hub/checkpoints'); \
-os.makedirs(cache_dir, exist_ok=True); \
-for i in range(3): \
-    try: \
-        for f in os.listdir(cache_dir): os.remove(os.path.join(cache_dir, f)); \
-        from demucs.pretrained import get_model; \
-        get_model('htdemucs'); \
-        print('htdemucs model downloaded'); \
-        break; \
-    except Exception as e: \
-        print(f'Attempt {i+1} failed: {e}'); \
-        time.sleep(5); \
-else: \
-    print('WARNING: demucs download failed, will download at runtime')"
+RUN python <<'PYEOF'
+import torch, time, os
+cache_dir = os.path.expanduser('~/.cache/torch/hub/checkpoints')
+os.makedirs(cache_dir, exist_ok=True)
+for i in range(3):
+    try:
+        for f in os.listdir(cache_dir):
+            os.remove(os.path.join(cache_dir, f))
+        from demucs.pretrained import get_model
+        get_model('htdemucs')
+        print('htdemucs model downloaded')
+        break
+    except Exception as e:
+        print(f'Attempt {i+1} failed: {e}')
+        time.sleep(5)
+else:
+    print('WARNING: demucs download failed, will download at runtime')
+PYEOF
 
 # ── Copy handler ─────────────────────────────────────────────────
 COPY handler.py /app/handler.py
