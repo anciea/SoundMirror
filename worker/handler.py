@@ -244,6 +244,12 @@ def run_seed_vc_direct(source_path: str, target_path: str, output_path: str,
     ckpt_path = os.path.join(SEED_VC_DIR, "checkpoints", "Seed-VC", ckpt_name)
     config_path = os.path.join(SEED_VC_DIR, "configs", "presets", "config_dit_mel_seed_uvit_whisper_base_f0_44k.yml")
     print(f"[Inference] Model: {model_version} → {ckpt_name}")
+    print(f"[Inference] Checkpoint exists: {os.path.exists(ckpt_path)}, path: {ckpt_path}")
+    print(f"[Inference] Config exists: {os.path.exists(config_path)}, path: {config_path}")
+    # List all checkpoint files
+    ckpt_dir = os.path.join(SEED_VC_DIR, "checkpoints", "Seed-VC")
+    if os.path.exists(ckpt_dir):
+        print(f"[Inference] Available checkpoints: {os.listdir(ckpt_dir)}")
 
     cmd = [
         "python", os.path.join(SEED_VC_DIR, "inference.py"),
@@ -267,11 +273,10 @@ def run_seed_vc_direct(source_path: str, target_path: str, output_path: str,
     elapsed = time.time() - start
 
     print(f"[Inference] Done in {elapsed:.1f}s, exit={result.returncode}")
+    if result.stdout:
+        print(f"[Inference] stdout:\n{result.stdout[-2000:]}")
     if result.stderr:
-        # Extract RTF line
-        for line in result.stderr.split('\n'):
-            if 'RTF' in line:
-                print(f"[Inference] {line.strip()}")
+        print(f"[Inference] stderr:\n{result.stderr[-2000:]}")
 
     if result.returncode != 0:
         raise RuntimeError(f"Seed-VC failed: {result.stderr[-300:]}")
@@ -725,6 +730,7 @@ if __name__ == "__main__":
         load_all_models()
     except Exception as e:
         print(f"[Init] WARNING: Model preload failed: {e}")
+        traceback.print_exc()
         print("[Init] Models will be loaded on first inference via subprocess")
 
     runpod.serverless.start({"handler": handler})
