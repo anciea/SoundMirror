@@ -3,18 +3,22 @@ FROM runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04
 
 WORKDIR /app
 
+# ── Use China mirrors for apt ────────────────────────────────────
+RUN sed -i 's|http://archive.ubuntu.com|http://mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list && \
+    sed -i 's|http://security.ubuntu.com|http://mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list
+
 # ── System dependencies ──────────────────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# ── Clone Seed-VC ────────────────────────────────────────────────
-RUN git clone --depth 1 https://github.com/Plachtaa/seed-vc.git /app/seed-vc
+# ── Clone Seed-VC (use mirror) ───────────────────────────────────
+RUN git clone --depth 1 https://ghfast.top/https://github.com/Plachtaa/seed-vc.git /app/seed-vc
 
 # ── Install Python dependencies (torch already in base image) ────
 # Removed: boto3, resemblyzer, jiwer, pydub
-RUN pip install --no-cache-dir \
+RUN pip install --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple \
     runpod \
     requests \
     scipy \
@@ -32,9 +36,11 @@ RUN pip install --no-cache-dir \
     pedalboard
 
 # ── Pre-generate matplotlib font cache (saves 23s at runtime) ────
-RUN pip install --no-cache-dir matplotlib && python -c "import matplotlib; print('Font cache generated')"
+RUN pip install --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple matplotlib && \
+    python -c "import matplotlib; print('Font cache generated')"
 
 # ── Pre-download model weights (free during build, not at runtime) ──
+ENV HF_ENDPOINT=https://hf-mirror.com
 ENV HF_HUB_DOWNLOAD_TIMEOUT=120
 RUN python <<'PYEOF'
 import time
@@ -52,7 +58,8 @@ else:
 PYEOF
 
 RUN python <<'PYEOF'
-import time
+import time, os
+os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
 from transformers import WhisperModel, WhisperFeatureExtractor
 for i in range(3):
     try:
