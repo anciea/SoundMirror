@@ -20,6 +20,7 @@ RUN git clone --depth 1 https://ghfast.top/https://github.com/Plachtaa/seed-vc.g
 # Removed: boto3, resemblyzer, jiwer, pydub
 RUN pip install --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple \
     runpod \
+    oss2 \
     requests \
     scipy \
     librosa \
